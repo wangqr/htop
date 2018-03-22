@@ -169,6 +169,7 @@ int ProcessList_size(ProcessList* this) {
 }
 
 static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int indent, int direction, bool show) {
+   fprintf(stderr, "ProcessList_buildTree(this, %d, %d, %d, %d, %s)\n", pid, level, indent, direction, show ? "true" : "false");
    Vector* children = Vector_new(Class(Process), false, DEFAULT_SIZE);
 
    for (int i = Vector_size(this->processes) - 1; i >= 0; i--) {
@@ -183,6 +184,8 @@ static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int i
       Process* process = (Process*) (Vector_get(children, i));
       if (!show)
          process->show = false;
+      fprintf(stderr, "  Add process PID=%d PPID=%d show=%s showChildren=%s\n",
+         process->pid, pid, process->show ? "true" : "false", process->showChildren ? "true" : "false");
       int s = this->processes2->items;
       if (direction == 1)
          Vector_add(this->processes2, process);
@@ -203,6 +206,7 @@ void ProcessList_sort(ProcessList* this) {
    if (!this->settings->treeView) {
       Vector_insertionSort(this->processes);
    } else {
+      fprintf(stderr, "\nProcessList_sort(this)\n");
       // Save settings
       int direction = this->settings->direction;
       int sortKey = this->settings->sortKey;
@@ -220,15 +224,17 @@ void ProcessList_sort(ProcessList* this) {
          int i;
          for (i = 0; i < size; i++) {
             Process* process = (Process*)(Vector_get(this->processes, i));
+            pid_t ppid = process->tgid == process->pid ? process->ppid : process->tgid;
             // Immediately consume not shown processes
             if (!process->show) {
                process = (Process*)(Vector_take(this->processes, i));
                process->indent = 0;
+               fprintf(stderr, "  Add process PID=%d PPID=%d show=%s showChildren=%s\n",
+                  process->pid, ppid, process->show?"true":"false", process->showChildren ? "true" : "false");
                Vector_add(this->processes2, process);
                ProcessList_buildTree(this, process->pid, 0, 0, direction, false);
                break;
             }
-            pid_t ppid = process->tgid == process->pid ? process->ppid : process->tgid;
             // Bisect the process vector to find parent
             int l = 0, r = size;
             // If PID corresponds with PPID (e.g. "kernel_task" (PID:0, PPID:0)
@@ -251,6 +257,8 @@ void ProcessList_sort(ProcessList* this) {
             if (l >= r) {
                process = (Process*)(Vector_take(this->processes, i));
                process->indent = 0;
+               fprintf(stderr, "  Add process PID=%d PPID=%d show=%s showChildren=%s\n",
+                  process->pid, ppid, process->show ? "true" : "false", process->showChildren ? "true" : "false");
                Vector_add(this->processes2, process);
                ProcessList_buildTree(this, process->pid, 0, 0, direction, process->showChildren);
                break;
