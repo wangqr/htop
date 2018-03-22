@@ -814,6 +814,14 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
          goto errorReadingProcess;
 
       proc->show = ! ((hideKernelThreads && Process_isKernelThread(proc)) || (hideUserlandThreads && Process_isUserlandThread(proc)));
+      fprintf(stderr, ">>> Setting show=%s for PID=%d", proc->show ? "true" : "false", proc->pid);
+      if (!proc->show) {
+         if (hideKernelThreads && Process_isKernelThread(proc))
+            fprintf(stderr, " isKernelThread=true");
+         if (hideUserlandThreads && Process_isUserlandThread(proc))
+            fprintf(stderr, " isUserlandThread=true");
+      }
+      fprintf(stderr, "\n");
 
       char command[MAX_NAME+1];
       unsigned long long int lasttimes = (lp->utime + lp->stime);
